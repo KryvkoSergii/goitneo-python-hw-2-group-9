@@ -1,4 +1,14 @@
-from objects import *
+from objects import (
+    Name,
+    Phone,
+    Email,
+    Record,
+    AddressBook,
+    PhoneNotExistException,
+    UnableToEditPhoneException,
+    IncorrectNameException,
+    IncorrectPhoneFormatException
+)
 
 
 def input_error(func):
@@ -11,31 +21,39 @@ def input_error(func):
             return "Unable to find record"
         except TypeError:
             return "Internal error. Contact developer"
+        except IndexError:
+            return "Not enough params. Use 'help' for more information"
         except IncorrectPhoneFormatException as err:
             return err
         except IncorrectNameException as err:
             return err
         except UnableToEditPhoneException as err:
             return err
+        except PhoneNotExistException as e:
+            return e
     return inner
 
 
 def parse_input(user_input):
     cmd, *args = user_input.split(" ")
     cmd = cmd.strip().lower()
-    return cmd, *args
+    return cmd, args
 
 
-@input_error
-def add_contact(address_book: AddressBook, args):
-    name, phone = args
-    name_obj = Name(name)
-    record_obj = Record(name_obj)
+# @input_error
+def add_contact(*args, address_book: AddressBook):
+    name = Name(args[0])
+    phone = Phone(args[1])
+    # name_obj = Name(name)
+    # record_obj = Record(name_obj)
 
-    phone_obj = Phone(phone)
-    record_obj.add_phone(phone_obj)
-
-    address_book.add_record(record_obj)
+    # phone_obj = Phone(phone)
+    # record_obj.add_phone(phone_obj)
+    rec: Record = address_book.get(str(name))
+    if rec:
+        rec.add_phone(phone)
+        return f"Phone number {phone} add to contact {name}"
+    address_book.add_record(Record(name, phone))
     return "Contact added."
 
 
@@ -74,17 +92,16 @@ def get_phone(address_book: AddressBook, args):
 
 
 @input_error
-def edit_phone(address_book: AddressBook, args):
-    name, old_phone, new_phone = args
-    record: Record = find_contact(name, address_book)
-    phones = list(filter(lambda r: str(r) == str(old_phone), record.phones))
-    if phones:
-        to_edit: Phone = phones[0]
-        to_edit.update_value(new_phone)
-        return "Phone changed."
-    else:
-        raise UnableToEditPhoneException(old_phone)
-
+def edit_phone(*args, address_book: AddressBook):
+    name = Name(args[0])
+    old_phone = Phone(args[1])
+    new_phone = Phone(args[2])
+    rec: Record = address_book.get(str(name))
+    if rec:
+        rec.edit_phone(old_phone, new_phone)
+        return "Edit phone"
+    return f"No contacts with name {name}"
+    
 
 @input_error
 def add_email(address_book: AddressBook, args):
@@ -122,7 +139,7 @@ def get_all(address_book: AddressBook):
     print(f"|{'Name:':^40}|{'Phone:':^30}|{'Email:':^30}|")
     print(f"|{'_'*40}|{'_'*30}|{'_'*30}|")
     if len(address_book.data) > 0:
-        for record in address_book.data:
+        for record in address_book.data.values():
             print(f"|{str(record.name):^40}|{', '.join(list(map(lambda rec: str(rec), record.phones))):^30}|{str(record.email) if record.email else '':^30}|")
             print(f"|{'_'*40}|{'_'*30}|{'_'*30}|")
     else:
@@ -152,20 +169,20 @@ Print all contacts - 'all'
     print(help)
     while True:
         user_input = input("Enter a command: ")
-        command, *args = parse_input(user_input)
+        command, args = parse_input(user_input)
         if command in ["close", "exit"]:
             print("Good bye!")
             break
         elif command == "hello":
             print("How can I help you?")
         elif command == "add":
-            print(add_contact(address_book, args))
+            print(add_contact(*args, address_book=address_book))
         elif command == "add-phone":
             print(add_phone(address_book, args))
         elif command == "remove-phone":
             print(remove_phone(address_book, args))
         elif command == "edit-phone":
-            print(edit_phone(address_book, args))
+            print(edit_phone(*args, address_book=address_book))
         elif command == "get-phone":
             print(get_phone(address_book, args))
         elif command == "add-email":
