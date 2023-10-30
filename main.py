@@ -5,7 +5,6 @@ from objects import (
     Record,
     AddressBook,
     PhoneNotExistException,
-    UnableToEditPhoneException,
     IncorrectNameException,
     IncorrectPhoneFormatException
 )
@@ -27,8 +26,6 @@ def input_error(func):
             return err
         except IncorrectNameException as err:
             return err
-        except UnableToEditPhoneException as err:
-            return err
         except PhoneNotExistException as e:
             return e
     return inner
@@ -40,15 +37,10 @@ def parse_input(user_input):
     return cmd, args
 
 
-# @input_error
+@input_error
 def add_contact(*args, address_book: AddressBook):
     name = Name(args[0])
     phone = Phone(args[1])
-    # name_obj = Name(name)
-    # record_obj = Record(name_obj)
-
-    # phone_obj = Phone(phone)
-    # record_obj.add_phone(phone_obj)
     rec: Record = address_book.get(str(name))
     if rec:
         rec.add_phone(phone)
@@ -101,7 +93,7 @@ def edit_phone(*args, address_book: AddressBook):
         rec.edit_phone(old_phone, new_phone)
         return "Edit phone"
     return f"No contacts with name {name}"
-    
+
 
 @input_error
 def add_email(address_book: AddressBook, args):
@@ -129,8 +121,7 @@ def remove_email(address_book: AddressBook, args):
 
 @input_error
 def remove(address_book: AddressBook, args):
-    name_obj = Name(args[0])
-    address_book.delete(name_obj)
+    address_book.delete(Name(args[0]))
     return "Removed."
 
 
