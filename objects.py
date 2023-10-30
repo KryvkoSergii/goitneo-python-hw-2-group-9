@@ -16,6 +16,7 @@ class IncorrectNameException(Exception):
 
     def __str__(self):
         return f"Incorrect name: {self.message}"
+
     
 class UnableToEditPhoneException(Exception):
     def __init__(self, message: str):
@@ -23,6 +24,10 @@ class UnableToEditPhoneException(Exception):
 
     def __str__(self):
         return f"Phone does not exist: {self.message}"
+
+
+class PhoneNotExistException(Exception):
+    pass
 
 
 class Field:
@@ -44,18 +49,21 @@ class Name(Field):
 
 
 class Phone(Field):
-    def __init__(self, phone: str):
-        Phone.validate(phone)
-        super().__init__(phone)
+    def __init__(self, value: str):
+        Phone.validate(value)
+        super().__init__(value)
 
-    def update_value(self, new_value: str):
-        Phone.validate(new_value)
-        self.value = new_value
+    # def update_value(self, new_value: str):
+    #     Phone.validate(new_value)
+    #     self.value = new_value
 
     def validate(phone: str):
         if not re.match(r"\d{10}", phone):
             raise IncorrectPhoneFormatException(
                 f"string '{phone}' does not match. Allowed digits only, lenght 10 digits")
+        
+    def __eq__(self, __value: object) -> bool:
+        return self.value == __value.value
 
 
 class Email(Field):
@@ -70,17 +78,20 @@ class Email(Field):
 
 
 class Record:
-    def __init__(self, name: Name):
+    def __init__(self, name: Name, phone: Phone | None = None):
         self.name = name
-        self.phones: list[Phone] = []
+        self.phones: list[Phone] = [phone] if phone else [] 
         self.email = None
-
-    def __str__(self):
-        return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
 
     def add_phone(self, phone: Phone):
         self.phones.append(phone)
-
+        
+    def edit_phone(self, old_phone: Phone, new_phone: Phone) -> None:
+        if old_phone in self.phones:
+            self.phones[self.phones.index(old_phone)] = new_phone
+            return None
+        raise PhoneNotExistException(f"No phone with number {old_phone} in contact {self.name}")
+        
     def remove_phone(self, phone: Phone):
         found = list(filter(lambda p: str(p) == str(phone), self.phones))
         for i in found:
@@ -88,21 +99,25 @@ class Record:
 
     def add_email(self, email: Email):
         self.email = email
+    
+    def __str__(self):
+        return f"Contact name: {self.name}, phones: {'; '.join(p.value for p in self.phones)}"
 
 
 class AddressBook(UserDict):
-    def __init__(self):
-        self.data = list()
+    # def __init__(self):
+    #     self.data = list()
 
     def add_record(self, record: Record):
-        self.data.append(record)
-
+        self.data[str(record.name)] = record
+        
     def find(self, name: Name):
-        found = list(filter(lambda record: str(record.name).lower()
-                     == str(name).lower(), self.data))
-        return found[0] if found else None
+        return self.data.get(str(name))
+        # found = list(filter(lambda record: str(record.name).lower()
+        #              == str(name).lower(), self.data))
+        # return found[0] if found else None
 
     def delete(self, name: Name):
-        found = AddressBook.find(name)
+        found = self.find(name)
         if found:
             self.data.remove(found)
